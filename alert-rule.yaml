@@ -1,0 +1,20 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: sample-app-alert
+  namespace: monitoring
+  labels:
+    release: prometheus # Prometheus가 이 규칙을 인식하도록 하는 핵심 라벨
+spec:
+  groups:
+    - name: sample-app.rules
+      rules:
+        - alert: SampleAppHighCPU
+          # 우리가 방금 Grafana에서 썼던 쿼리문 (임계치를 아주 낮게 0.002로 설정)
+          expr: sum(rate(container_cpu_usage_seconds_total{namespace="default", pod=~"sample-app-.*"}[1m])) by (pod) > 0.002
+          for: 1m # 1분 동안 계속 임계치를 넘고 있어야 알람을 울리도록 (잠깐 튀는 스파이크 방지)
+          labels:
+            severity: warning
+          annotations:
+            summary: "🚨 경고: {{ $labels.pod }} CPU 사용량 급증!"
+            description: "최근 1분 동안 CPU 사용량이 임계치를 초과했습니다. 폭주가 의심됩니다."
